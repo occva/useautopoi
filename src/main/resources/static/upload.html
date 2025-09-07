@@ -1,31 +1,64 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>文件上传和解析</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
+
 <body class="min-h-screen" style="background: linear-gradient(135deg, rgb(240, 246, 254) 0%, rgb(225, 231, 253) 100%);">
     <div class="min-h-screen flex flex-col items-center justify-center p-4">
-        <div class="w-full max-w-xl bg-white shadow-md rounded-xl p-8">
+        <div
+            class="w-full max-w-xl bg-white shadow-lg rounded-xl p-8 transition-all duration-300 hover:shadow-xl hover:scale-105">
             <h1 class="text-2xl font-semibold text-center text-gray-800 mb-6">文件上传和解析</h1>
 
             <div class="space-y-4">
-                <label class="block text-sm font-medium text-gray-700">选择文件</label>
-                <div class="flex items-center gap-3">
-                    <input id="fileInput" type="file" accept=".xlsx,.xls,.txt" class="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
-                </div>
-                <p id="fileName" class="text-sm text-gray-500">未选择任何文件</p>
+                <!-- 隐藏的原生文件输入 -->
+                <input id="fileInput" type="file" accept=".xlsx,.xls,.txt" class="hidden" />
 
-                <button id="parseBtn" disabled class="w-full px-4 py-2 rounded-md bg-blue-500 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors">开始解析</button>
+                <!-- 自定义拖拽上传区域 -->
+                <div id="uploadArea"
+                    class="relative border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer transition-all duration-300 hover:border-blue-400 hover:bg-blue-50 group">
+                    <div class="flex flex-col items-center space-y-3">
+                        <!-- 上传图标 -->
+                        <div
+                            class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 transition-colors duration-300">
+                            <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12">
+                                </path>
+                            </svg>
+                        </div>
+
+                        <!-- 上传文本 -->
+                        <div>
+                            <p
+                                class="text-lg font-medium text-gray-700 group-hover:text-blue-600 transition-colors duration-300">
+                                点击此处或拖拽文件上传</p>
+                            <p class="text-sm text-gray-500 mt-1">支持 .xlsx, .xls, .txt 格式</p>
+                        </div>
+                    </div>
+
+                    <!-- 拖拽覆盖层 -->
+                    <div id="dragOverlay"
+                        class="absolute inset-0 bg-blue-100 bg-opacity-80 rounded-lg flex items-center justify-center hidden">
+                        <p class="text-blue-600 font-medium">释放文件开始上传</p>
+                    </div>
+                </div>
+
+                <p id="fileName" class="text-sm text-gray-500 text-center">未选择任何文件</p>
+
+                <button id="parseBtn" disabled
+                    class="w-full px-4 py-2 rounded-md bg-blue-500 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-600 hover:scale-105 transition-all duration-200">开始解析</button>
             </div>
 
             <p id="errorMsg" class="mt-4 text-sm text-red-600 hidden"></p>
         </div>
 
         <div id="tableSection" class="w-full max-w-4xl mt-8 hidden">
-            <div class="bg-white shadow-md rounded-xl p-4 overflow-auto">
+            <div class="bg-white shadow-lg rounded-xl p-4 overflow-auto transition-all duration-300 hover:shadow-xl">
                 <table id="resultTable" class="min-w-full text-sm text-left text-gray-700">
                     <thead class="bg-gray-100 text-gray-700 font-semibold"></thead>
                     <tbody></tbody>
@@ -36,8 +69,10 @@
         <!-- 遮罩层与浮层（模态） -->
         <div id="overlay" class="fixed inset-0 bg-transparent z-40 hidden"></div>
         <div id="modalRoot" class="fixed inset-0 z-50 hidden items-center justify-center">
-            <div id="modalPanel" class="relative bg-gray-100 border border-gray-300 rounded-xl shadow-2xl w-[80vw] h-[90vh] flex flex-col">
-                <button id="modalClose" class="absolute top-3 right-3 text-gray-500 hover:text-gray-700" aria-label="关闭">
+            <div id="modalPanel"
+                class="relative bg-white border border-gray-200 rounded-xl shadow-2xl w-[80vw] h-[90vh] flex flex-col transition-all duration-300">
+                <button id="modalClose" class="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
+                    aria-label="关闭">
                     ✕
                 </button>
                 <div class="px-5 pt-5 pb-3 border-b border-gray-200">
@@ -45,7 +80,8 @@
                 </div>
                 <div class="p-4 grow flex flex-col min-h-0">
                     <div id="tabBar" class="flex gap-3 mb-3 flex-wrap"></div>
-                    <div id="tabContent" class="bg-white border border-gray-300 rounded-lg p-3 overflow-x-auto overflow-y-auto flex-1 min-h-0">
+                    <div id="tabContent"
+                        class="bg-white border border-gray-300 rounded-lg p-3 overflow-x-auto overflow-y-auto flex-1 min-h-0">
                         <table id="modalTable" class="min-w-max text-sm text-left text-gray-700 align-top">
                             <thead class="bg-gray-100 text-gray-700 font-semibold"></thead>
                             <tbody></tbody>
@@ -66,6 +102,8 @@
 
     <script>
         const fileInput = document.getElementById('fileInput');
+        const uploadArea = document.getElementById('uploadArea');
+        const dragOverlay = document.getElementById('dragOverlay');
         const parseBtn = document.getElementById('parseBtn');
         const fileNameEl = document.getElementById('fileName');
         const errorMsg = document.getElementById('errorMsg');
@@ -79,15 +117,66 @@
         const tabBar = document.getElementById('tabBar');
         const tabContent = document.getElementById('tabContent');
 
-        fileInput.addEventListener('change', () => {
-            const file = fileInput.files && fileInput.files[0];
+        // 文件选择处理函数
+        function handleFileSelect(file) {
             if (file) {
-                fileNameEl.textContent = file.name;
+                fileNameEl.textContent = `已选择: ${file.name}`;
                 parseBtn.disabled = false;
                 errorMsg.classList.add('hidden');
+                uploadArea.classList.add('border-green-400', 'bg-green-50');
+                uploadArea.classList.remove('border-gray-300');
             } else {
                 fileNameEl.textContent = '未选择任何文件';
                 parseBtn.disabled = true;
+                uploadArea.classList.remove('border-green-400', 'bg-green-50');
+                uploadArea.classList.add('border-gray-300');
+            }
+        }
+
+        // 原生文件输入变化事件
+        fileInput.addEventListener('change', () => {
+            const file = fileInput.files && fileInput.files[0];
+            handleFileSelect(file);
+        });
+
+        // 点击上传区域触发文件选择
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // 拖拽事件处理
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('border-blue-400', 'bg-blue-50');
+            dragOverlay.classList.remove('hidden');
+        });
+
+        uploadArea.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            if (!uploadArea.contains(e.relatedTarget)) {
+                uploadArea.classList.remove('border-blue-400', 'bg-blue-50');
+                dragOverlay.classList.add('hidden');
+            }
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('border-blue-400', 'bg-blue-50');
+            dragOverlay.classList.add('hidden');
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                const allowedTypes = ['.xlsx', '.xls', '.txt'];
+                const fileName = file.name.toLowerCase();
+                const isValidType = allowedTypes.some(type => fileName.endsWith(type));
+
+                if (isValidType) {
+                    fileInput.files = files;
+                    handleFileSelect(file);
+                } else {
+                    showError('请选择 .xlsx, .xls 或 .txt 格式的文件');
+                }
             }
         });
 
@@ -232,7 +321,7 @@
             results.forEach((res, idx) => {
                 const btn = document.createElement('button');
                 btn.type = 'button';
-                btn.className = 'px-3 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-100';
+                btn.className = 'px-3 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-100 transition-all duration-200 hover:scale-105';
                 btn.textContent = res.sheetName || `Sheet ${idx + 1}`;
                 btn.addEventListener('click', () => selectSheet(idx));
                 tabBar.appendChild(btn);
@@ -245,7 +334,7 @@
 
                 // 高亮当前 tab
                 Array.from(tabBar.children).forEach((el, i) => {
-                    el.className = 'px-3 py-1 rounded border ' + (i === index
+                    el.className = 'px-3 py-1 rounded border transition-all duration-200 hover:scale-105 ' + (i === index
                         ? 'border-blue-500 text-blue-700 bg-blue-50'
                         : 'border-gray-300 text-gray-700 hover:bg-gray-100');
                 });
@@ -338,5 +427,5 @@
         }
     </script>
 </body>
-</html>
 
+</html>
