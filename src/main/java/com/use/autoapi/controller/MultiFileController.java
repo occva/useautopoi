@@ -28,6 +28,12 @@ public class MultiFileController {
 		return ResponseEntity.ok(result);
 	}
 
+	@PostMapping(value = "/upload-xlsx-sheets", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	public ResponseEntity<List<ExcelParseResult>> uploadXlsxAllSheets(MultipartFile file) {
+		List<ExcelParseResult> results = excelAutoParseService.parseAllSheets(file);
+		return ResponseEntity.ok(results);
+	}
+
 	@PostMapping(value = "/upload-multi", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ResponseEntity<List<ExcelParseResult>> uploadMultiple(MultipartFile[] files) {
 		List<ExcelParseResult> results = new ArrayList<>();

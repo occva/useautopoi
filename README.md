@@ -1,74 +1,49 @@
-# UseAutoPOI
+# useautopoi
 
-A Spring Boot service for dynamic Excel (.xlsx/.xls) file upload and parsing, powered by EasyPOI. This service provides intelligent Excel parsing with automatic header detection and structured data extraction.
+A Spring Boot service for dynamic Excel (.xlsx/.xls) upload and parsing powered by EasyPOI.
 
-<img src="https://s2.loli.net/2025/09/07/Ymsx5g3GBUDQoT4.png" alt="image-20250907185947270" width="75%" />
+## 致谢与来源
+- 本项目来源于开源项目 [jeecgboot/autopoi](https://github.com/jeecgboot/autopoi)，在此致以感谢。
 
-<img src="https://s2.loli.net/2025/09/07/VlaYRzAoecJvNyu.png" alt="image-20250907190121091" width="75%" />
+## Features
+- Upload Excel files via `/upload.html` (Tailwind UI)
+- Backend parses first-row headers and returns `{ columns, rows }` JSON
+- Modal table preview with horizontal scrolling; bottom progress bar
+- Console pretty table print for diagnostics
 
-
-## 🚀 Features
-
-- **Smart Excel Upload**: Web interface with drag-and-drop support via `/upload.html`
-- **Dynamic Parsing**: Automatically detects first-row headers and extracts structured data
-- **Rich UI**: Modal table preview with horizontal scrolling and progress indicators
-- **Multiple Formats**: Supports both `.xlsx` and `.xls` file formats
-- **Developer Tools**: Console pretty-print for debugging and diagnostics
-- **RESTful API**: Clean JSON response format for easy integration
-
-## 🛠️ Quick Start
-
-### Prerequisites
-- Java 8 or higher
-- Maven 3.6+
-
-### Running the Application
-```bash
+## How to Run
+```
 mvn clean spring-boot:run
 ```
+Open `http://localhost:9000/upload.html` and upload an Excel file.
 
-Once started, navigate to `http://localhost:9000/upload.html` to access the upload interface.
-
-## 📡 API Reference
-
-### Upload Excel File
-**Endpoint:** `POST /excel/upload-xlsx`
-
-**Parameters:**
-- `file` (multipart/form-data): Excel file to parse
-
-
-
-## 🏗️ Project Structure
-
+## API
+- POST `/excel/upload-xlsx`: multipart file param `file`, response:
 ```
-com.use.autoapi/
-├── UseautopoiApplication.java          # Main application entry point
-├── controller/
-│   └── MultiFileController.java        # REST endpoints for file upload
-├── service/
-│   ├── ExcelAutoParseService.java      # Service interface
-│   ├── FileProcessingService.java      # File processing utilities
-│   └── impl/
-│       └── ExcelAutoParseServiceImpl.java  # Core parsing implementation
-├── dto/
-│   ├── ExcelColumnInfo.java           # Column metadata model
-│   ├── ExcelParseResult.java          # Parse result wrapper
-│   └── FileUploadResponse.java        # API response model
-└── util/
-    └── ExcelAnalyzeUtil.java          # Excel analysis utilities
+{
+  "columns": [{ "headerName": "Address", "columnIndex": 0 }],
+  "rows": [["0xabc", "12.3"]]
+}
 ```
 
-## 🔧 Configuration
-
-The application runs on port `9000` by default. You can modify this in `application.properties`:
-
-```properties
-server.port=9000
+## Packages
+```
+com.use.autoapi
+├─ UseautopoiApplication.java
+├─ controller
+│  └─ MultiFileController.java
+├─ service
+│  ├─ ExcelAutoParseService.java
+│  ├─ FileProcessingService.java
+│  └─ impl
+│     └─ ExcelAutoParseServiceImpl.java
+├─ dto
+│  ├─ ExcelColumnInfo.java
+│  ├─ ExcelParseResult.java
+│  └─ FileUploadResponse.java
+└─ util
+   └─ ExcelAnalyzeUtil.java
 ```
 
-## 🤝 Acknowledgments
-
-This project is built upon the excellent work of:
-- [jeecgboot/autopoi](https://github.com/jeecgboot/autopoi) - Core Excel processing capabilities
-- EasyPOI community for simplifying Excel operations in Java
+## Credits
+- EasyPOI / AutoPOI for simplifying Excel operations.

@@ -9,5 +9,6 @@ public class ExcelParseResult {
 
 	private List<ExcelColumnInfo> columns;
 	private List<List<String>> rows;
+	private String sheetName;
 }
 

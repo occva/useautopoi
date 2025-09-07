@@ -42,6 +42,33 @@ public class ExcelAnalyzeUtil {
 		}
 	}
 
+	public static ExcelParseResult parseSheet(Sheet sheet) {
+		Row header = sheet.getRow(0);
+		if (header == null) {
+			throw new IllegalArgumentException("Empty sheet header");
+		}
+		List<ExcelColumnInfo> cols = new ArrayList<>();
+		for (int c = 0; c < header.getLastCellNum(); c++) {
+			Cell cell = header.getCell(c, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+			cols.add(new ExcelColumnInfo(cell.toString(), c));
+		}
+		List<List<String>> rows = new ArrayList<>();
+		for (int r = 1; r <= sheet.getLastRowNum(); r++) {
+			Row row = sheet.getRow(r);
+			if (row == null) continue;
+			List<String> vals = new ArrayList<>();
+			for (int c = 0; c < cols.size(); c++) {
+				Cell cell = row.getCell(c, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+				vals.add(getCellString(cell));
+			}
+			rows.add(vals);
+		}
+		ExcelParseResult res = new ExcelParseResult();
+		res.setColumns(cols);
+		res.setRows(rows);
+		return res;
+	}
+
 	private static String getCellString(Cell cell) {
 		if (cell == null) return "";
 		if (cell.getCellType() == CellType.NUMERIC) {

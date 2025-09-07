@@ -6,7 +6,7 @@
     <title>文件上传和解析</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="min-h-screen bg-gray-50">
+<body class="min-h-screen" style="background: linear-gradient(135deg, rgb(240, 246, 254) 0%, rgb(225, 231, 253) 100%);">
     <div class="min-h-screen flex flex-col items-center justify-center p-4">
         <div class="w-full max-w-xl bg-white shadow-md rounded-xl p-8">
             <h1 class="text-2xl font-semibold text-center text-gray-800 mb-6">文件上传和解析</h1>
@@ -36,18 +36,21 @@
         <!-- 遮罩层与浮层（模态） -->
         <div id="overlay" class="fixed inset-0 bg-transparent z-40 hidden"></div>
         <div id="modalRoot" class="fixed inset-0 z-50 hidden items-center justify-center">
-            <div id="modalPanel" class="relative bg-gray-100 border border-gray-300 rounded-xl shadow-2xl w-[80vw] h-[80vh] flex flex-col">
+            <div id="modalPanel" class="relative bg-gray-100 border border-gray-300 rounded-xl shadow-2xl w-[80vw] h-[90vh] flex flex-col">
                 <button id="modalClose" class="absolute top-3 right-3 text-gray-500 hover:text-gray-700" aria-label="关闭">
                     ✕
                 </button>
                 <div class="px-5 pt-5 pb-3 border-b border-gray-200">
                     <h2 class="text-lg font-semibold text-gray-800">解析结果</h2>
                 </div>
-                <div class="p-4 overflow-x-auto overflow-y-auto grow">
-                    <table id="modalTable" class="min-w-max text-sm text-left text-gray-700 align-top">
-                        <thead class="bg-gray-100 text-gray-700 font-semibold"></thead>
-                        <tbody></tbody>
-                    </table>
+                <div class="p-4 grow flex flex-col min-h-0">
+                    <div id="tabBar" class="flex gap-3 mb-3 flex-wrap"></div>
+                    <div id="tabContent" class="bg-white border border-gray-300 rounded-lg p-3 overflow-x-auto overflow-y-auto flex-1 min-h-0">
+                        <table id="modalTable" class="min-w-max text-sm text-left text-gray-700 align-top">
+                            <thead class="bg-gray-100 text-gray-700 font-semibold"></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -73,6 +76,8 @@
         const modalPanel = document.getElementById('modalPanel');
         const modalClose = document.getElementById('modalClose');
         const modalTable = document.getElementById('modalTable');
+        const tabBar = document.getElementById('tabBar');
+        const tabContent = document.getElementById('tabContent');
 
         fileInput.addEventListener('change', () => {
             const file = fileInput.files && fileInput.files[0];
@@ -97,7 +102,7 @@
             const xhr = new XMLHttpRequest();
             const nameLower = (file.name || '').toLowerCase();
             const isTxt = nameLower.endsWith('.txt');
-            const endpoint = isTxt ? '/txt/upload' : '/excel/upload-xlsx';
+            const endpoint = isTxt ? '/txt/upload' : '/excel/upload-xlsx-sheets';
             xhr.open('POST', endpoint);
             xhr.responseType = 'json';
 
@@ -111,10 +116,15 @@
             xhr.onload = () => {
                 if (xhr.status >= 200 && xhr.status < 300) {
                     showProgress(90, '解析中…');
-                    const data = xhr.response || {};
-                    const headers = (data.columns || []).map(c => c.headerName);
-                    const rows = data.rows || [];
-                    renderTableInModal(headers, rows);
+                    const data = xhr.response;
+                    if (isTxt) {
+                        const headers = ((data && data.columns) || []).map(c => c.headerName);
+                        const rows = (data && data.rows) || [];
+                        renderTableInModal(headers, rows);
+                    } else {
+                        const list = Array.isArray(data) ? data : [];
+                        renderMultiSheetInModal(list);
+                    }
                     showProgress(100, '完成');
                     setTimeout(hideProgress, 800);
                 } else {
@@ -166,11 +176,18 @@
 
         function renderTableInModal(headers, rows) {
             // 清理
+            tabBar.innerHTML = '';
             modalTable.querySelector('thead').innerHTML = '';
             modalTable.querySelector('tbody').innerHTML = '';
 
             if (headers && headers.length > 0) {
                 const trHead = document.createElement('tr');
+                // 行号表头
+                const thIndex = document.createElement('th');
+                thIndex.className = 'px-0 py-2 border-b border-gray-200 whitespace-nowrap text-gray-500 text-center bg-gray-100';
+                thIndex.style.width = '30px';
+                thIndex.textContent = '';
+                trHead.appendChild(thIndex);
                 headers.forEach(h => {
                     const th = document.createElement('th');
                     th.className = 'px-3 py-2 border-b border-gray-200 whitespace-nowrap';
@@ -182,6 +199,12 @@
 
             rows.forEach(r => {
                 const tr = document.createElement('tr');
+                // 行号单元
+                const tdIndex = document.createElement('td');
+                tdIndex.className = 'px-0 py-2 border-b border-gray-100 whitespace-nowrap text-gray-500 text-center bg-gray-100';
+                tdIndex.style.width = '30px';
+                tdIndex.textContent = String((modalTable.querySelector('tbody').children.length || 0) + 1);
+                tr.appendChild(tdIndex);
                 r.forEach(c => {
                     const td = document.createElement('td');
                     td.className = 'px-3 py-2 border-b border-gray-100 whitespace-nowrap';
@@ -191,6 +214,83 @@
                 modalTable.querySelector('tbody').appendChild(tr);
             });
 
+            openModal();
+        }
+
+        function renderMultiSheetInModal(results) {
+            // 清理
+            modalTable.querySelector('thead').innerHTML = '';
+            modalTable.querySelector('tbody').innerHTML = '';
+            tabBar.innerHTML = '';
+
+            if (!Array.isArray(results) || results.length === 0) {
+                openModal();
+                return;
+            }
+
+            // 构建 tabs
+            results.forEach((res, idx) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'px-3 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-100';
+                btn.textContent = res.sheetName || `Sheet ${idx + 1}`;
+                btn.addEventListener('click', () => selectSheet(idx));
+                tabBar.appendChild(btn);
+            });
+
+            function selectSheet(index) {
+                const res = results[index];
+                const headers = (res.columns || []).map(c => c.headerName);
+                const rows = res.rows || [];
+
+                // 高亮当前 tab
+                Array.from(tabBar.children).forEach((el, i) => {
+                    el.className = 'px-3 py-1 rounded border ' + (i === index
+                        ? 'border-blue-500 text-blue-700 bg-blue-50'
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-100');
+                });
+
+                // 重绘表格
+                modalTable.querySelector('thead').innerHTML = '';
+                modalTable.querySelector('tbody').innerHTML = '';
+
+                if (headers.length > 0) {
+                    const trHead = document.createElement('tr');
+                    // 行号表头
+                    const thIndex = document.createElement('th');
+                    thIndex.className = 'px-0 py-2 border-b border-gray-200 whitespace-nowrap text-gray-500 text-center bg-gray-100';
+                    thIndex.style.width = '30px';
+                    thIndex.textContent = '';
+                    trHead.appendChild(thIndex);
+                    headers.forEach(h => {
+                        const th = document.createElement('th');
+                        th.className = 'px-3 py-2 border-b border-gray-200 whitespace-nowrap';
+                        th.textContent = h;
+                        trHead.appendChild(th);
+                    });
+                    modalTable.querySelector('thead').appendChild(trHead);
+                }
+
+                rows.forEach(r => {
+                    const tr = document.createElement('tr');
+                    // 行号单元
+                    const tdIndex = document.createElement('td');
+                    tdIndex.className = 'px-0 py-2 border-b border-gray-100 whitespace-nowrap text-gray-500 text-center bg-gray-100';
+                    tdIndex.style.width = '30px';
+                    tdIndex.textContent = String((modalTable.querySelector('tbody').children.length || 0) + 1);
+                    tr.appendChild(tdIndex);
+                    r.forEach(c => {
+                        const td = document.createElement('td');
+                        td.className = 'px-3 py-2 border-b border-gray-100 whitespace-nowrap';
+                        td.textContent = c;
+                        tr.appendChild(td);
+                    });
+                    modalTable.querySelector('tbody').appendChild(tr);
+                });
+            }
+
+            // 默认选中第一个 sheet
+            selectSheet(0);
             openModal();
         }
 
