@@ -14,7 +14,7 @@
             <div class="space-y-4">
                 <label class="block text-sm font-medium text-gray-700">选择文件</label>
                 <div class="flex items-center gap-3">
-                    <input id="fileInput" type="file" accept=".xlsx,.xls" class="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                    <input id="fileInput" type="file" accept=".xlsx,.xls,.txt" class="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
                 </div>
                 <p id="fileName" class="text-sm text-gray-500">未选择任何文件</p>
 
@@ -34,9 +34,9 @@
         </div>
 
         <!-- 遮罩层与浮层（模态） -->
-        <div id="overlay" class="fixed inset-0 bg-black/50 z-40 hidden"></div>
+        <div id="overlay" class="fixed inset-0 bg-transparent z-40 hidden"></div>
         <div id="modalRoot" class="fixed inset-0 z-50 hidden items-center justify-center">
-            <div id="modalPanel" class="relative bg-white rounded-xl shadow-2xl w-[80vw] h-[80vh] flex flex-col">
+            <div id="modalPanel" class="relative bg-gray-100 border border-gray-300 rounded-xl shadow-2xl w-[80vw] h-[80vh] flex flex-col">
                 <button id="modalClose" class="absolute top-3 right-3 text-gray-500 hover:text-gray-700" aria-label="关闭">
                     ✕
                 </button>
@@ -95,7 +95,10 @@
             showProgress(5, '开始上传…');
 
             const xhr = new XMLHttpRequest();
-            xhr.open('POST', '/excel/upload-xlsx');
+            const nameLower = (file.name || '').toLowerCase();
+            const isTxt = nameLower.endsWith('.txt');
+            const endpoint = isTxt ? '/txt/upload' : '/excel/upload-xlsx';
+            xhr.open('POST', endpoint);
             xhr.responseType = 'json';
 
             xhr.upload.onprogress = (e) => {
@@ -166,14 +169,16 @@
             modalTable.querySelector('thead').innerHTML = '';
             modalTable.querySelector('tbody').innerHTML = '';
 
-            const trHead = document.createElement('tr');
-            headers.forEach(h => {
-                const th = document.createElement('th');
-                th.className = 'px-3 py-2 border-b border-gray-200 whitespace-nowrap';
-                th.textContent = h;
-                trHead.appendChild(th);
-            });
-            modalTable.querySelector('thead').appendChild(trHead);
+            if (headers && headers.length > 0) {
+                const trHead = document.createElement('tr');
+                headers.forEach(h => {
+                    const th = document.createElement('th');
+                    th.className = 'px-3 py-2 border-b border-gray-200 whitespace-nowrap';
+                    th.textContent = h;
+                    trHead.appendChild(th);
+                });
+                modalTable.querySelector('thead').appendChild(trHead);
+            }
 
             rows.forEach(r => {
                 const tr = document.createElement('tr');
